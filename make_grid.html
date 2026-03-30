@@ -3,97 +3,341 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>구역 격자화 (수계 자동 감지) → CSV</title>
+<title>격자 생성기</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:monospace; background:#111; color:#eee; height:100vh; display:flex; flex-direction:column; }
-.bar { background:#1a1a1a; border-bottom:1px solid #333; padding:10px 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; z-index:1000; }
-.bar-title { font-size:14px; font-weight:700; color:#60a5fa; white-space:nowrap; }
-.btn { font-size:11px; padding:5px 14px; border-radius:4px; border:none; cursor:pointer; font-weight:700; transition:all 0.15s; white-space:nowrap; }
-.btn-yellow { background:#854d0e; color:#fef08a; border:1px solid #ca8a04; }
-.btn-red    { background:#7f1d1d; color:#fca5a5; border:1px solid #dc2626; }
-.btn-green  { background:#14532d; color:#86efac; border:1px solid #16a34a; }
-.btn-blue   { background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; }
-.btn-cyan   { background:#0c3344; color:#67e8f9; border:1px solid #0891b2; }
-.btn:hover  { filter:brightness(1.2); }
-.btn:disabled { opacity:0.3; cursor:not-allowed; }
-.sep { width:1px; height:20px; background:#333; flex-shrink:0; }
-.ctrl-group { display:flex; align-items:center; gap:6px; }
-label { font-size:11px; color:#666; }
-input[type=range] { width:70px; accent-color:#60a5fa; }
-.ctrl-val { font-size:11px; color:#60a5fa; min-width:36px; }
-#status { font-size:11px; padding:4px 10px; border-radius:4px; color:#facc15; background:#1a1400; border:1px solid #854d0e; }
-#map { flex:1; }
-.side { position:absolute; top:58px; left:12px; z-index:1000; display:flex; flex-direction:column; gap:8px; }
-.card { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px 14px; font-size:10px; min-width:210px; }
-.card-title { color:#64748b; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; font-size:9px; }
-.coord-item { color:#94a3b8; padding:2px 0; border-bottom:1px solid #222; display:flex; gap:6px; }
-.coord-item:last-child { border-bottom:none; }
-.coord-num { color:#facc15; }
-.stat-row { display:flex; justify-content:space-between; gap:12px; padding:3px 0; border-bottom:1px solid #222; color:#94a3b8; }
-.stat-row:last-child { border-bottom:none; }
-.stat-val { color:#60a5fa; font-weight:700; }
-.stat-val.red { color:#f87171; }
-.progress-bar { height:4px; background:#222; border-radius:2px; margin-top:6px; overflow:hidden; display:none; }
-.progress-fill { height:100%; background:#0891b2; border-radius:2px; width:0%; transition:width 0.1s; }
-.preview { position:absolute; bottom:20px; right:12px; z-index:1000; background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px 14px; font-size:10px; max-width:340px; max-height:200px; overflow-y:auto; display:none; }
-.preview-title { color:#64748b; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; font-size:9px; }
-pre { color:#94a3b8; line-height:1.8; font-size:10px; }
-.head { color:#60a5fa; font-weight:700; }
-.leaflet-container { background:#111; }
-.leaflet-tile { filter:brightness(0.65) saturate(0.7); }
+
+body {
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  background: #f0f2f5;
+  color: #1a1a2e;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── 사이드바 ── */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+}
+
+.sidebar-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.sidebar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-title .icon {
+  width: 28px; height: 28px;
+  background: #3b82f6;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── 섹션 ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ── 버튼 ── */
+.btn {
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+.btn:not(:disabled):active { transform: translateY(0); }
+
+.btn-primary   { background:#3b82f6; color:#fff; border-color:#2563eb; }
+.btn-success   { background:#10b981; color:#fff; border-color:#059669; }
+.btn-warning   { background:#f59e0b; color:#fff; border-color:#d97706; }
+.btn-danger    { background:#fff;    color:#ef4444; border-color:#fecaca; }
+.btn-secondary { background:#f9fafb; color:#374151; border-color:#e5e7eb; }
+.btn-download  { background:#6366f1; color:#fff; border-color:#4f46e5; }
+
+.btn-group { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── 슬라이더 ── */
+.slider-wrap { background: #f9fafb; border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; }
+.slider-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.slider-title { font-size: 12px; font-weight: 500; color: #374151; }
+.slider-val { font-size: 13px; font-weight: 600; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 5px; }
+input[type=range] { width: 100%; accent-color: #3b82f6; }
+
+/* ── 파일명 입력 ── */
+.filename-wrap { display: flex; flex-direction: column; gap: 5px; }
+.filename-label { font-size: 11px; color: #6b7280; }
+.filename-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.filename-input:focus { border-color: #3b82f6; background: #fff; }
+.filename-hint { font-size: 10px; color: #9ca3af; }
+
+/* ── 상태 표시 ── */
+.status-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  min-height: 38px;
+}
+.status-box.info   { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+.status-box.success{ background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+.status-box.loading{ background: #f5f3ff; border-color: #ddd6fe; color: #4c1d95; }
+
+/* ── 꼭짓점 목록 ── */
+.coords-list { display: flex; flex-direction: column; gap: 3px; }
+.coord-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f9fafb;
+  border: 1px solid #f0f2f5;
+}
+.coord-num {
+  width: 18px; height: 18px;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.coord-text { font-size: 10px; color: #6b7280; font-family: monospace; }
+.coords-empty { font-size: 11px; color: #d1d5db; text-align: center; padding: 8px 0; }
+
+/* ── 통계 카드 ── */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.stat-card-label { font-size: 9px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
+.stat-card-val { font-size: 15px; font-weight: 600; color: #111827; }
+.stat-card-val.red { color: #ef4444; }
+.stat-card-val.blue { color: #3b82f6; }
+
+/* ── 프로그레스 ── */
+.progress-bar { height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; display: none; margin-top: 8px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #6366f1); border-radius: 2px; width: 0%; transition: width 0.1s; }
+
+/* ── 지도 영역 ── */
+.map-wrap { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; }
+.leaflet-container { background: #e8ecf0; }
+
+/* ── CSV 미리보기 ── */
+.preview-panel {
+  position: absolute;
+  bottom: 16px; right: 16px;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 10px;
+  max-width: 320px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.preview-title { font-size: 9px; font-weight: 600; color: #9ca3af; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+pre { color: #374151; line-height: 1.8; font-size: 10px; }
+.head { color: #3b82f6; font-weight: 600; }
+
+/* ── 스크롤바 ── */
+.sidebar-body::-webkit-scrollbar { width: 4px; }
+.sidebar-body::-webkit-scrollbar-track { background: transparent; }
+.sidebar-body::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+
+/* ── 구분선 ── */
+.divider { height: 1px; background: #f0f2f5; margin: 0 -16px; }
+
+canvas { display: none; }
 </style>
 </head>
 <body>
 
-<div class="bar">
-  <div class="bar-title">🗺 격자화 (수계 자동 감지) → CSV</div>
-  <button class="btn btn-yellow" id="undoBtn"  onclick="undoPoint()"    disabled>↩ 취소</button>
-  <div class="sep"></div>
-  <button class="btn btn-red"   id="clearBtn" onclick="clearAll()"     disabled>✕ 초기화</button>
-  <button class="btn btn-cyan"  id="waterBtn" onclick="detectWater()"  disabled>💧 수계 감지</button>
-  <button class="btn btn-green" id="gridBtn"  onclick="generateGrid()" disabled>⊞ 격자 생성</button>
-  <div class="ctrl-group">
-    <input type="text" id="csvFilename" placeholder="파일명 (선택)" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid #334155;background:#0f172a;color:#94a3b8;width:150px;font-family:monospace;">
-    <span style="font-size:10px;color:#555;">.csv</span>
-  </div>
-  <button class="btn btn-blue"  id="csvBtn"   onclick="downloadCSV()"  disabled>⬇ CSV 저장</button>
-  <div class="ctrl-group">
-    <label>격자 크기</label>
-    <input type="range" id="gridM" min="50" max="500" value="100" step="50"
-           oninput="document.getElementById('gridMVal').textContent=this.value+'m'">
-    <span class="ctrl-val" id="gridMVal">100m</span>
-  </div>
-  <div id="status">지도를 클릭해서 꼭짓점을 찍으세요 (최소 3개)</div>
-</div>
-
-<div id="map"></div>
-
-<!-- 숨겨진 캔버스 — 타일 픽셀 읽기용 -->
-<canvas id="tileCanvas" style="display:none;"></canvas>
-
-<div class="side">
-  <div class="card">
-    <div class="card-title">꼭짓점</div>
-    <div id="coordsList" style="color:#555;">아직 없음</div>
-  </div>
-  <div class="card" id="statsCard" style="display:none;">
-    <div class="card-title">결과</div>
-    <div class="stat-row"><span>전체 후보</span><span class="stat-val" id="r-total">—</span></div>
-    <div class="stat-row"><span>수계 제외</span><span class="stat-val red" id="r-water">—</span></div>
-    <div class="stat-row"><span>최종 격자</span><span class="stat-val" id="r-count">—</span></div>
-    <div class="stat-row"><span>격자 크기</span><span class="stat-val" id="r-size">—</span></div>
-    <div class="progress-bar" id="progressBar">
-      <div class="progress-fill" id="progressFill"></div>
+<!-- ── 사이드바 ── -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">
+      <div class="icon">🗺</div>
+      격자 생성기
     </div>
   </div>
+
+  <div class="sidebar-body">
+
+    <!-- 상태 -->
+    <div>
+      <div class="section-label">상태</div>
+      <div id="status" class="status-box">지도를 클릭해서 꼭짓점을 찍으세요 (최소 3개)</div>
+    </div>
+
+    <!-- 격자 크기 -->
+    <div>
+      <div class="section-label">격자 크기</div>
+      <div class="slider-wrap">
+        <div class="slider-row">
+          <span class="slider-title">한 변의 길이</span>
+          <span class="slider-val" id="gridMVal">100m</span>
+        </div>
+        <input type="range" id="gridM" min="50" max="500" value="100" step="50"
+               oninput="document.getElementById('gridMVal').textContent=this.value+'m'">
+      </div>
+    </div>
+
+    <!-- 작업 버튼 -->
+    <div>
+      <div class="section-label">작업</div>
+      <div class="btn-group">
+        <button class="btn btn-warning" id="waterBtn" onclick="detectWater()" disabled>
+          💧 수계 감지
+        </button>
+        <button class="btn btn-success" id="gridBtn" onclick="generateGrid()" disabled>
+          ⊞ 격자 생성
+        </button>
+      </div>
+    </div>
+
+    <!-- 저장 -->
+    <div>
+      <div class="section-label">저장</div>
+      <div class="filename-wrap" style="margin-bottom:8px;">
+        <div class="filename-label">파일명 (선택)</div>
+        <input type="text" id="csvFilename" class="filename-input" placeholder="자동 생성">
+        <div class="filename-hint">.csv + _polygon.json 으로 저장됩니다</div>
+      </div>
+      <button class="btn btn-download" id="csvBtn" onclick="downloadCSV()" disabled>
+        ⬇ CSV + JSON 저장
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 편집 -->
+    <div>
+      <div class="section-label">편집</div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="undoBtn" onclick="undoPoint()" disabled>
+          ↩ 마지막 꼭짓점 취소
+        </button>
+        <button class="btn btn-danger" id="clearBtn" onclick="clearAll()" disabled>
+          ✕ 전체 초기화
+        </button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 꼭짓점 목록 -->
+    <div>
+      <div class="section-label">꼭짓점</div>
+      <div id="coordsList" class="coords-list">
+        <div class="coords-empty">아직 없음</div>
+      </div>
+    </div>
+
+    <!-- 결과 통계 -->
+    <div id="statsCard" style="display:none;">
+      <div class="section-label">결과</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-label">전체 후보</div>
+          <div class="stat-card-val blue" id="r-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">수계 제외</div>
+          <div class="stat-card-val red" id="r-water">—</div>
+        </div>
+        <div class="stat-card" style="grid-column:1/-1;">
+          <div class="stat-card-label">최종 격자 (격자 크기)</div>
+          <div class="stat-card-val blue" id="r-count">—</div>
+          <div style="font-size:10px;color:#9ca3af;margin-top:1px;" id="r-size"></div>
+        </div>
+      </div>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<div class="preview" id="preview">
-  <div class="preview-title">CSV 미리보기 (앞 10행)</div>
-  <pre id="previewText"></pre>
+<!-- ── 지도 ── -->
+<div class="map-wrap">
+  <div id="map"></div>
+  <canvas id="tileCanvas"></canvas>
+
+  <div class="preview-panel" id="preview">
+    <div class="preview-title">CSV 미리보기 (앞 10행)</div>
+    <pre id="previewText"></pre>
+  </div>
 </div>
 
 <script>
@@ -219,7 +463,7 @@ async function detectWater() {
     lat += LAT_STEP;
   }
 
-  setStatus('수계 감지 중... (타일 픽셀 분석)', 'loading');
+  setStatus('수계 감지 중... 타일 픽셀을 분석하고 있어요.', 'loading');
   document.getElementById('statsCard').style.display='block';
   const pb = document.getElementById('progressBar');
   const pf = document.getElementById('progressFill');
@@ -304,7 +548,7 @@ async function detectWater() {
     }
   }
 
-  setStatus(`수계 감지 완료 — ${waterSet.size}개 격자 수계 감지됨. [격자 생성]을 눌러주세요`);
+  setStatus(`수계 감지 완료 — ${waterSet.size}개 격자 수계 감지됨. 격자 생성을 눌러주세요`, 'success');
   document.getElementById('gridBtn').disabled = false;
   updateUI();
 }
@@ -352,7 +596,7 @@ function generateGrid() {
   document.getElementById('r-total').textContent = allCandidates.length.toLocaleString()+'개';
   document.getElementById('r-water').textContent = waterExcl.toLocaleString()+'개';
   document.getElementById('r-count').textContent = gridData.length.toLocaleString()+'개';
-  document.getElementById('r-size').textContent  = GRID_M+'m × '+GRID_M+'m';
+  document.getElementById('r-size').textContent = GRID_M+'m × '+GRID_M+'m';
   document.getElementById('statsCard').style.display='block';
 
   const header = 'grid_id,center_lat,center_lng,sw_lat,sw_lng,ne_lat,ne_lng';
@@ -366,24 +610,43 @@ function generateGrid() {
   document.getElementById('csvBtn').disabled=false;
   document.getElementById('gridBtn').disabled=true;
   gridDone=true;
-  setStatus(`완료 — 유효 격자 ${gridData.length}개 (수계 ${waterExcl}개 제외)`);
+  setStatus(`완료 — 유효 격자 ${gridData.length}개 (수계 ${waterExcl}개 제외)`, 'success');
   updateUI();
 }
 
-// ── CSV 저장 ──────────────────────────────────────────────────────
+// ── CSV + JSON 저장 ───────────────────────────────────────────────
 function downloadCSV() {
+  const customName = document.getElementById('csvFilename').value.trim();
+  const defaultName = `grid_${document.getElementById('gridM').value}m_${gridData.length}cells`;
+  const baseName = (customName || defaultName).replace(/\.csv$/i,'');
+
+  // ── CSV ──
   const header = 'grid_id,center_lat,center_lng,sw_lat,sw_lng,ne_lat,ne_lng';
   const rows   = gridData.map(g=>
     `${g.id},${g.centerLat},${g.centerLng},${g.swLat},${g.swLng},${g.neLat},${g.neLng}`
   );
-  const customName = document.getElementById('csvFilename').value.trim();
-  const defaultName = `grid_${document.getElementById('gridM').value}m_${gridData.length}cells`;
-  const filename = (customName || defaultName).replace(/\.csv$/i,'') + '.csv';
-  const a = Object.assign(document.createElement('a'), {
+  const csvLink = Object.assign(document.createElement('a'), {
     href:     URL.createObjectURL(new Blob([[header,...rows].join('\n')],{type:'text/csv'})),
-    download: filename
+    download: baseName + '.csv'
   });
-  a.click();
+  csvLink.click();
+
+  // ── JSON (polygon_coords) ──
+  const polygonJson = JSON.stringify({
+    polygon_coords: points.map(p => [
+      parseFloat(p.lat.toFixed(6)),
+      parseFloat(p.lng.toFixed(6))
+    ]),
+    grid_size_m: parseInt(document.getElementById('gridM').value),
+    grid_count:  gridData.length,
+    saved_at:    new Date().toISOString()
+  }, null, 2);
+
+  const jsonLink = Object.assign(document.createElement('a'), {
+    href:     URL.createObjectURL(new Blob([polygonJson], {type:'application/json'})),
+    download: baseName + '_polygon.json'
+  });
+  jsonLink.click();
 }
 
 // ── 취소 / 초기화 ─────────────────────────────────────────────────
@@ -406,15 +669,17 @@ function clearAll() {
   waterDetected=false; gridDone=false;
   ['statsCard','preview'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('csvBtn').disabled=true;
-  setStatus('지도를 클릭해서 꼭짓점을 찍으세요 (최소 3개)');
+  setStatus('지도를 클릭해서 꼭짓점을 찍으세요 (최소 3개)', 'info');
   updateUI();
 }
 
 function setStatus(msg, type='') {
   const el = document.getElementById('status');
-  el.textContent=msg;
-  if(type==='loading') { el.style.color='#94a3b8'; el.style.borderColor='#334155'; el.style.background='#0f172a'; }
-  else { el.style.color='#facc15'; el.style.borderColor='#854d0e'; el.style.background='#1a1400'; }
+  el.textContent = msg;
+  el.className = 'status-box';
+  if (type === 'loading') el.classList.add('loading');
+  else if (type === 'success') el.classList.add('success');
+  else if (type === 'info') el.classList.add('info');
 }
 
 function updateUI() {
@@ -424,8 +689,13 @@ function updateUI() {
   document.getElementById('waterBtn').disabled = n<3||done;
   document.getElementById('gridBtn').disabled  = !waterDetected||done||allCandidates.length===0;
   const list=document.getElementById('coordsList');
-  list.innerHTML = n===0 ? '<span style="color:#555">아직 없음</span>'
-    : points.map((p,i)=>`<div class="coord-item"><span class="coord-num">${i+1}</span>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>`).join('');
+  list.innerHTML = n===0
+    ? '<div class="coords-empty">아직 없음</div>'
+    : points.map((p,i)=>`
+        <div class="coord-item">
+          <span class="coord-num">${i+1}</span>
+          <span class="coord-text">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span>
+        </div>`).join('');
 }
 
 updateUI();
