@@ -4,7 +4,7 @@ from pathlib import Path
 
 # ───────────────────────────────────────────────
 # ★ 설정: 이동할 목적지 폴더를 여기에 입력하세요
-TARGET_FOLDER = "C:/crawling/test/project/data/grid/"
+TARGET_FOLDER = "D:/workspaces/00_Project/crawlProject/test_project/project/data/grid/"
 # ───────────────────────────────────────────────
 
 DOWNLOADS = Path.home() / "Downloads"
