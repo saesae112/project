@@ -2,23 +2,22 @@ import streamlit as st
 import pandas as pd
 import folium
 import os
-from get_data.get import get_dfs, get_latest_grid_data
-from calculate.calculate import set_score, calc_rank
-from visualize.visualize import visualize
+from get_data.get import *
+from calculate.calculate import *
+from visualize.visualize import *
+from db.db import upload_result, delete_result
 
 st.set_page_config(layout="wide")
 
 
 
 
-if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.error("로그인이 필요합니다.")
-    st.stop()  # 이 아래 코드는 실행되지 않음
+# if "logged_in" not in st.session_state or not st.session_state.logged_in:
+#     st.error("로그인이 필요합니다.")
+#     st.stop()  # 이 아래 코드는 실행되지 않음
     
 
     
-df_grid, grid_bd_points = get_latest_grid_data()
-dfs = get_dfs()
 
 ICON_MAP = {
     "broadcast":         folium.Icon(color="orange",    icon="broadcast-tower",  prefix="fa"),
@@ -37,6 +36,15 @@ ICON_MAP = {
 
 
 def main():
+
+        # Get data building data
+    df_grid, grid_bd_points = get_latest_grid_data()
+
+    dfs1 = get_dfs1()
+
+    # Get pop/density data
+    dfs2 = get_dfs2(df_grid)
+
 
     if 'user_input' not in st.session_state:
         st.info('사용자 입력 페이지에서 조건을 먼저 입력해주세요.')
@@ -64,16 +72,45 @@ def main():
         radar_num = int(user_input['radar_num'])
 
         with st.status('후보지 계산 중...', expanded=True) as calc_status:
-            set_score(dfs, weight_dic)
+            set_score(dfs1, weight_dic)
 
             st.write('최적 후보지 계산 중... ')
-            rank_dic, max_radar_num = calc_rank(
-                dfs, df_grid, RANGE_KM, radar_num=radar_num, polygon_coords=grid_bd_points
-            )
+            rank_dic, max_radar_num = calc_rank(dfs1, df_grid, RANGE_KM, radar_num=50, polygon_coords=grid_bd_points)
+
+            df_population = dfs2['population']
+            df_area_density = dfs2['area_density']
+
+            df_final = get_df_final(rank_dic, df_grid, df_population, df_area_density, RANGE_KM)
+
+            upload_result(df_final)
+
+            if "final_df" not in st.session_state:
+                st.session_state.final_df = df_final
+
+            
+            ICON_MAP = {
+                "broadcast":         folium.Icon(color="orange",     icon="broadcast-tower",   prefix="fa"),
+                "electricity":       folium.Icon(color="green",      icon="bolt",              prefix="fa"),
+                "factory":           folium.Icon(color="blue",       icon="industry",          prefix="fa"),
+                "hospital":          folium.Icon(color="red",        icon="hospital",          prefix="fa"),
+                "infra":             folium.Icon(color="darkblue",   icon="cogs",              prefix="fa"),
+                "prison":            folium.Icon(color="black",      icon="university",        prefix="fa"),
+                "public":            folium.Icon(color="cadetblue",  icon="building",          prefix="fa"),
+                "science":           folium.Icon(color="pink",       icon="flask",             prefix="fa"),
+                "telecommunication": folium.Icon(color="beige",      icon="satellite-dish",    prefix="fa"),
+                "transportation":    folium.Icon(color="darkgreen",  icon="train",             prefix="fa"),
+                "water":             folium.Icon(color="lightblue",  icon="tint",              prefix="fa"),
+                "frequency":         folium.Icon(color="darkred",    icon="signal",            prefix="fa"),
+            }
+            
+
+
 
             st.write('지도 생성 중...')
-            visualize(df_grid, dfs, rank_dic, RANGE_KM, ICON_MAP,
-                      show_rank=None, polygon_coords=grid_bd_points, df_coverage=None)
+            
+            visualize(df_grid, dfs1, rank_dic, RANGE_KM, ICON_MAP,
+                        show_rank=None, polygon_coords=grid_bd_points,
+                        df_final=df_final)
 
             df_rank = pd.DataFrame([
                 {
@@ -87,7 +124,7 @@ def main():
 
             st.session_state['calc_results'] = {
                 'df_rank':   df_rank,
-                'dfs':       dfs,
+                'dfs':       dfs1,
                 'range_km':  RANGE_KM,
                 'radar_num': radar_num,
                 'weights':   weight_dic,

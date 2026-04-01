@@ -5,9 +5,9 @@ import os
 from utils import apply_input_style
 
 
-if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.error("로그인이 필요합니다.")
-    st.stop()  # 이 아래 코드는 실행되지 않음
+# if "logged_in" not in st.session_state or not st.session_state.logged_in:
+#     st.error("로그인이 필요합니다.")
+#     st.stop()  # 이 아래 코드는 실행되지 않음
     
 apply_input_style()
 # 두 컬럼의 높이를 같게 설정하는 CSS
@@ -31,7 +31,7 @@ with col2:
 
 
 with st.container():
-    col1, col2=st.columns([6,3])
+    col1, col2=st.columns([7,2])
     with col1:
         
         map_file = os.path.join(os.path.dirname(__file__), '../make_grid.html')
@@ -49,8 +49,8 @@ with st.container():
             st.number_input('사정 거리 (km)', min_value=0.0, max_value=100.0, value=1.5, step=0.2, format='%.1f', key='range_km')
             st.text_input('후보지 수', value='3', key='radar_num', placeholder='후보지 수를 입력하세요')
 
-            options = ['전력시설', '정보통신시설', '국가 공공기관 시설', '교통 항공 항만 시설', '수원 시설', '지하공동구', '인구밀도 ',
-                    '토지 이용 압축도', '산업 시설', '기지국', '병원', '과학연구', '교정 시설', '방송시설']
+            options = ['전력시설', '정보통신시설', '국가 공공기관 시설', '교통 항공 항만 시설', '수원 시설', '지하공동구',
+                     '산업 시설', '기지국', '병원', '과학연구', '교정 시설', '방송시설']
             default_weights = {
                 '전력시설':           '0.02198',
                 '정보통신시설':        '0.14754',
@@ -70,7 +70,7 @@ with st.container():
             st.write('후보지 고려 사항을 선택하세요 ')
             with st.container(border=True):
                 for opt in options:
-                    c1, c2 = st.columns([1, 1])
+                    c1, c2 = st.columns([2, 1])
                     with c1:
                         checked = st.checkbox(opt, key=f'check_{opt}')
                     with c2:
@@ -107,7 +107,7 @@ with st.container():
                 }
                 st.session_state.pop('calc_results', None)
 
-                st.switch_page("pages/2_계산.py")
+                st.switch_page("pages/3_후보지 계산.py")
 
 
                 

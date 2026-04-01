@@ -1,0 +1,41 @@
+import streamlit as st
+import numpy as np
+import pandas as pd
+from get_data.get import *
+from calculate.calculate import *
+from visualize.visualize import *
+from db.db import upload_result
+
+st.set_page_config(layout="wide")
+
+
+# if "logged_in" not in st.session_state or not st.session_state.logged_in:
+#     st.error("로그인이 필요합니다.")
+#     st.stop()  # 이 아래 코드는 실행되지 않음
+    
+    
+st.title("데이터프레임")
+
+
+
+
+
+results = st.session_state.get('final_df', None)
+
+if results is None:
+    st.info("계산을 먼저 실행해주세요.")
+else:
+    results.columns=['순위', '격자ID', '위도', '경도', '가중치 반영 점수','인구 밀도','건물 밀집도']
+    st.subheader("후보지 결과 데이터프레임")
+    st.dataframe(results)
+
+    
+    st.download_button(
+        label="Download CSV",
+        data=results.to_csv(index=False).encode('utf-8'),
+        file_name='candidate_sites.csv',
+        mime='text/csv',
+    )
+
+
+
