@@ -7,11 +7,12 @@ import json
 import geopandas as gpd
 from shapely.geometry import Point, Polygon
 from shapely import wkt
-
+import urllib
 
 # ────────────────────────────────────────────────────────────────────────────────
 # DB 초기화 (삭제 후 재생성)
 # ────────────────────────────────────────────────────────────────────────────────
+
 def reset_and_create_db():
     """데이터베이스를 완전히 삭제하고 새로 생성합니다."""
     db = st.secrets["mysql"]
@@ -25,6 +26,34 @@ def reset_and_create_db():
     # CREATE/DROP DATABASE는 트랜잭션 밖에서 즉시 실행해야 하므로 AUTOCOMMIT 필수
     temp_engine = create_engine(base_url, isolation_level="AUTOCOMMIT")
 
+    try:
+        with temp_engine.connect() as conn:
+            # 기존 DB 삭제 (없으면 무시)
+            conn.execute(text(f"DROP DATABASE IF EXISTS {db['database']}"))
+            # 새 DB 생성
+            conn.execute(text(f"CREATE DATABASE {db['database']} CHARACTER SET {db['charset']}"))
+
+    except Exception as e:
+        print(f"❌ 데이터베이스 초기화 실패: {e}")
+    finally:
+        temp_engine.dispose()  # 임시 엔진 연결 해제
+
+def reset_and_create_db_server():
+    """서버에 데이터베이스를 완전히 삭제하고 새로 생성합니다."""
+    db = st.secrets["dbserver"]
+   
+    # ── 2. 인증 방식 변경 (SQL Server 인증) ─────────────
+    # Trusted_Connection이 사라지고 UID와 PWD가 추가됨
+    params = urllib.parse.quote_plus(
+        f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+        f'SERVER={db['server']};'
+        f'DATABASE={db['database']};'
+        f'UID={db['username']};'
+        f'PWD={db['password']};'
+        f'TrustServerCertificate=yes;' # 인증서 오류 방지용 (필수)
+    )
+    temp_engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
+   
     try:
         with temp_engine.connect() as conn:
             # 기존 DB 삭제 (없으면 무시)
@@ -57,6 +86,23 @@ def get_engine(db_name=None):
     engine = create_engine(url, pool_pre_ping=True)
     return engine
 
+@st.cache_resource
+def get_engine_server(db_name=None):
+    db = st.secrets["dbserver"]
+
+    database = db_name if db_name else db['database']
+    
+    params = urllib.parse.quote_plus(
+        f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+        f'SERVER={db['server']};'
+        f'DATABASE={database};'
+        f'UID={db['username']};'
+        f'PWD={db['password']};'
+        f'TrustServerCertificate=yes;' # 인증서 오류 방지용 (필수)
+    )
+
+    engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
+    return engine
 
 # ────────────────────────────────────────────────────────────────────────────────
 # DB 연결 상태 확인
