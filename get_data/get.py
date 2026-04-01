@@ -90,7 +90,6 @@ def reset_and_create_db_server():
 # ────────────────────────────────────────────────────────────────────────────────
 # DB 연결 엔진 생성
 # ────────────────────────────────────────────────────────────────────────────────
-@st.cache_resource
 def get_engine(db_name=None):
     """
     SQLAlchemy 엔진을 생성하여 반환합니다.
@@ -106,7 +105,6 @@ def get_engine(db_name=None):
     engine = create_engine(url, pool_pre_ping=True)
     return engine
 
-@st.cache_resource
 def get_engine_server(db_name=None):
     db = st.secrets["dbserver"]
 
