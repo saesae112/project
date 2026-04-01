@@ -67,6 +67,22 @@ def import_data():
         df.to_sql(name=file_name, con=engine, if_exists='replace', index=False)
         print(f"[{file_name}] 테이블 적재 완료")
 
+    # 2. JSON 파일 적재 (추가된 로직)
+    json_list = glob('final_data/*.json')
+    for json_file in json_list:
+        # GeoPandas로 읽기
+        gdf = gpd.read_file(json_file)
+        
+        # 파일명에서 테이블 이름 추출 (예: grid5_polygon.json -> polygon)
+        raw_name = os.path.splitext(os.path.basename(json_file))[0]
+        json_name = raw_name.split('_')[-1] # '_' 기준 마지막 단어 추출
+        
+        if 'geometry' in gdf.columns:
+            gdf['geometry'] = gdf['geometry'].apply(lambda x: str(x))
+            
+        gdf.to_sql(name=json_name, con=engine, if_exists='replace', index=False)
+        print(f"✅ JSON 적재 완료: [{json_name}]")
+
 # 4. 데이터 가져오기 (Select)
 def get_all_data(data_list):
     engine = get_engine()

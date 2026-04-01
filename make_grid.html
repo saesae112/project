@@ -346,10 +346,16 @@ canvas { display: none; }
 const map = L.map('map', { zoomControl:true }).setView([37.555, 126.928], 14);
 
 // 수계 감지용: 밝은 타일 (물이 파란색으로 명확히 표시됨)
+
 const detectTile = L.tileLayer(
-  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { attribution:'© OSM', maxZoom:19 }
+  'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', 
+  { attribution: '© OpenStreetMap contributors' }
 ).addTo(map);
+
+// const detectTile = L.tileLayer(
+//   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+//   { attribution:'© OSM', maxZoom:19 }
+// ).addTo(map);
 
 let points=[], markers=[], polyline=null, polygon=null;
 let gridRects=[], gridData=[];
