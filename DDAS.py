@@ -47,8 +47,8 @@ st.markdown("""
 with st.container():
     col1, col2= st.columns([3.73, 1])
     with col1:
-        st.title("D-DAS : 대드론 방어체계 최적지 선정 서비스")
-        st.write( '(Drone Defense Allocation Service)')
+        st.title("대드론 방어체계")
+        st.write( '(D-DAS : Drone Defense Allocation Service)')
         st.write("")
         st.write("💡 **안내**")
         st.caption("본 서비스는 국내 도심 환경을 고려한 대드론 방어체계(C-UAS) 최적 입지 분석을 제공합니다.")
@@ -77,15 +77,15 @@ with chan1:
             st.markdown("### 1️⃣")
             st.markdown("### **데이터 탐색**")
             st.write('')
-            st.caption("사이드바: 1_입지 분석")
+            st.caption("사이드바: 데이터 탐색")
             st.write("서울시 전역의 **Raw Data를 지도에서 확인**하고, 데이터 분포 현황을 파악합니다.")
 
     with col2:
         with st.container(border=True):
             st.markdown("### 2️⃣")
-            st.markdown("### **분석 설계**")
+            st.markdown("### **조건 설정**")
             st.write('')
-            st.caption("사이드바: 2_후보지 조건 설정")
+            st.caption("사이드바: 후보지 조건 설정")
             st.write("분석할 **격자 영역을 생성**하고, 방어무기 **사정거리** 및 시설별 **가중치**를 설정합니다.")
 
     with col3:
@@ -93,7 +93,7 @@ with chan1:
             st.markdown("### 3️⃣")
             st.markdown("### **후보지 계산**")
             st.write('')
-            st.caption("사이드바: 3_후보지 계산")
+            st.caption("사이드바: 후보지 계산")
             st.write("설정된 시나리오를 바탕으로 **최적의 배치 지점**을 알고리즘이 자동 산출합니다.")
 
     with col4:
@@ -151,6 +151,6 @@ if sub_butt:
         
         if cursor.fetchone():
             st.session_state.logged_in = True
-            st.switch_page("pages/1_입지 분석.py")
+            st.switch_page("pages/1_데이터 탐색.py")
             
         
