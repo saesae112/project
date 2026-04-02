@@ -2,23 +2,7 @@ import streamlit as st
 import sys
 import os
 
-from utils import apply_input_style
 
-
-# if "logged_in" not in st.session_state or not st.session_state.logged_in:
-#     st.error("로그인이 필요합니다.")
-#     st.stop()  # 이 아래 코드는 실행되지 않음
-    
-apply_input_style()
-# 두 컬럼의 높이를 같게 설정하는 CSS
-st.markdown('''
-<style>
-    [data-testid="column"] {
-        display: flex !important;
-        flex-direction: column;
-    }
-</style>
-''', unsafe_allow_html=True)
 
 with st.sidebar:
     st.write("📊 **전체 분석 진행률**")
@@ -47,13 +31,8 @@ with st.sidebar:
 #     st.info("**2단계: 분석 설계**\n\n격자를 생성하고 분석에 사용할 변수와 가중치를 설정해 주세요.")
 
 
-st.title('D-DAS',text_alignment='right')
-
-col1, col2 = st.columns([6, 3])
-
-with col2:
-    st.caption( 'Drone Defense Allocation System',text_alignment='right')
-
+st.title('후보지 조건 설정')
+st.write("")
 
 with st.expander("⚙️ **이 페이지에서는 무엇을 하나요?**", expanded=False): # 중요하므로 펼쳐둠
     st.write("서울시 내 집중 방어 구역을 선택하고, 장비 스펙과 시설별 중요도를 설정하는 단계입니다.")

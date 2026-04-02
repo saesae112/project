@@ -1,4 +1,3 @@
-from get_data.get import get_engine, disconnect_db
 from get_data.get_server import get_engine_server
 from sqlalchemy import text
 

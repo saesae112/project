@@ -175,9 +175,9 @@ def main():
     # 비교할 시나리오 2개 선택
     col1, col2 = st.columns(2)
     with col1:
-        name_a = st.selectbox("시나리오 A", names, index=0)
+        name_a = st.selectbox("시나리오 A", names, index=0, key="scenario_a")
     with col2:
-        name_b = st.selectbox("시나리오 B", names, index=min(1, len(names) - 1))
+        name_b = st.selectbox("시나리오 B", names, index=min(1, len(names) - 1), key="scenario_b")
 
     if name_a == name_b:
         st.warning("서로 다른 시나리오를 선택해주세요.")
@@ -186,37 +186,39 @@ def main():
     s1 = next(s for s in scenarios if s['name'] == name_a)
     s2 = next(s for s in scenarios if s['name'] == name_b)
 
-    # 입력 조건 나란히
-    st.markdown("#### 입력 조건 비교")
-    col1, col2 = st.columns(2)
-    with col1:
-        with st.container(border=True):
-            st.markdown(f"**{s1['name']}**")
-            show_conditions(s1)
-    with col2:
-        with st.container(border=True):
-            st.markdown(f"**{s2['name']}**")
-            show_conditions(s2)
+    tab1, tab2, tab3, tab4 = st.tabs(['입력 조건 비교','점수 비교','누적 커버율','상세 비교'])
+    
+    with tab1:
+        st.markdown("#### 입력 조건 비교")
+        col1, col2 = st.columns(2)
+        with col1:
+            with st.container(border=True):
+                st.markdown(f"**{s1['name']}**")
+                show_conditions(s1)
+        with col2:
+            with st.container(border=True):
+                st.markdown(f"**{s2['name']}**")
+                show_conditions(s2)
 
-    st.divider()
-    show_score_comparison(s1, s2)
+    with tab2:
+        show_score_comparison(s1, s2)
 
-    st.divider()
-    show_coverage_comparison(s1, s2)
+    with tab3:
+        show_coverage_comparison(s1, s2)
+    
+    with tab4:
+        show_rank_table_comparison(s1, s2)
 
-    st.divider()
-    show_rank_table_comparison(s1, s2)
-
-    # 저장된 시나리오 목록 및 삭제
-    with st.expander("저장된 시나리오 관리"):
-        for s in scenarios:
-            c1, c2 = st.columns([4, 1])
-            c1.write(s['name'])
-            if c2.button("삭제", key=f"del_{s['name']}"):
-                st.session_state['scenarios'] = [
-                    x for x in scenarios if x['name'] != s['name']
-                ]
-                st.rerun()
+        # 저장된 시나리오 목록 및 삭제
+        with st.expander("저장된 시나리오 관리"):
+            for s in scenarios:
+                c1, c2 = st.columns([4, 1])
+                c1.write(s['name'])
+                if c2.button("삭제", key=f"del_{s['name']}"):
+                    st.session_state['scenarios'] = [
+                        x for x in scenarios if x['name'] != s['name']
+                    ]
+                    st.rerun()
 
 
 main()

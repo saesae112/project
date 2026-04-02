@@ -1,4 +1,4 @@
-from get_data.get import get_engine, disconnect_db, get_engine_server
+from get_data.get import get_engine, disconnect_db
 from sqlalchemy import text
 
 def upload_result(df):
