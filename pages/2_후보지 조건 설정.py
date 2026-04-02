@@ -6,12 +6,6 @@ from utils import set_common_banner
 
 set_common_banner()
 
-with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
-    st.progress(50)
-    st.info("⚙️ **2단계: 분석 설계**\n\n격자를 생성하고 원하는 입력값과 고려변수를 선택해 보세요.")
-    st.divider()
-
 
 st.subheader('후보지 조건 설정')
 st.divider()

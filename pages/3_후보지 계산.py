@@ -3,7 +3,7 @@ import pandas as pd
 import folium
 import os
 import base64
-from get_data.get import *
+from get.get import *
 from calculate.calculate import *
 from visualize.visualize import *
 from db.db import upload_result, delete_result
@@ -49,11 +49,7 @@ ICON_MAP = {
     "water":             folium.Icon(color="lightblue", icon="tint",             prefix="fa"),
     "frequency":         folium.Icon(color="darkred",   icon="signal",           prefix="fa"),
 }
-with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
-    st.progress(75)
-    st.info("🚀 **3단계: 후보지 계산**\n\n알고리즘이 최적의 배치 지점을 산출하고 있습니다.")
-    st.divider()
+
 
 def main():
         # Get data building data

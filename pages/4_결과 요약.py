@@ -32,11 +32,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
     
-with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
-    st.progress(100)
-    st.success("✅ **최종: 결과 활용**\n\n분석이 완료되었습니다. 리포트를 확인해보세요.")
-    st.divider()
+
 
 if st.session_state.get('calc_results') ==None:
     st.error('⚠️ 사용자 입력 페이지에서 조건을 먼저 입력해주세요.')
