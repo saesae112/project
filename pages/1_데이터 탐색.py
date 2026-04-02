@@ -8,6 +8,8 @@ from folium.plugins import MarkerCluster
 from shapely.wkt import loads
 from shapely.geometry import box
 import json
+import base64
+from utils import set_common_banner
 
 # if "logged_in" not in st.session_state or not st.session_state.logged_in:
 #     st.error("로그인이 필요합니다.")
@@ -147,9 +149,9 @@ def render_facility_tab():
         final_df = load_facility_data(target_mids, sel_tag)
         
         if not final_df.empty:
-            st.info(f"📍 검색 결과: 총 {len(final_df)}개의 시설물을 찾았습니다.")
+            st.info(f"검색 결과: 총 {len(final_df)}개의 시설물을 찾았습니다.")
             csv_data = final_df.to_csv(index=False).encode('utf_8_sig')
-            st.download_button(label="📥 시설물 결과 CSV 다운로드", data=csv_data, file_name='facility_analysis.csv', mime='text/csv')
+            st.download_button(label="시설물 결과 CSV 다운로드", data=csv_data, file_name='facility_analysis.csv', mime='text/csv')
 
             m = folium.Map(location=[final_df.latitude.mean(), final_df.longitude.mean()], zoom_start=11)
             mc = MarkerCluster(name="시설물 클러스터").add_to(m)
@@ -226,7 +228,7 @@ def render_grid_tab():
         if combined_gdf is not None:
             # GeoJSON 다운로드 버튼
             geojson_data = combined_gdf.to_json()
-            st.download_button(label="🌍 격자 통합 GeoJSON 다운로드", data=geojson_data, file_name='grid_analysis.geojson', mime='application/json')
+            st.download_button(label="격자 통합 GeoJSON 다운로드", data=geojson_data, file_name='grid_analysis.geojson', mime='application/json')
             
             # --- 툴팁 필드 및 별칭(Aliases) 동적 구성 ---
             active_fields = ['gid']
@@ -260,19 +262,20 @@ def render_grid_tab():
 # =========================================================
 
 def main():
+    set_common_banner()
     st.set_page_config(layout="wide", page_title="C-UAS 통합 분석")
     
     with st.sidebar:
-        st.write("📊 **전체 분석 진행률**")
+        st.write("**전체 분석 진행률**")
         st.caption("현재: 1단계 (25%)")
         st.progress(25)
-        st.info("🔎 **1단계: 데이터 탐색**\n\n서울시 전역의 기초 데이터를 자유롭게 탐색해 보세요.")
+        st.info("**1단계: 데이터 탐색**\n\n서울시 전역의 기초 데이터를 자유롭게 탐색해 보세요.")
 
 
-    st.title("입지 데이터 탐색")
-    st.write("")
+    st.subheader("데이터 탐색")
+    st.divider()
 
-    with st.expander("🔍 **이 페이지에서는 무엇을 하나요?**", expanded=False):
+    with st.expander("**이 페이지에서는 무엇을 하나요?**", expanded=False):
         st.write("본 페이지는 서울시의 **시설물(지점)**, **인구/건물(격자)** 데이터를 탐색하는 단계입니다.")
         st.write("") 
 
@@ -280,7 +283,7 @@ def main():
         
         with col1:
             # 탭 1에 대한 설명
-            st.markdown("##### 📍 시설물 지점 분석 (Point)")
+            st.markdown("##### 시설물 지점 분석 (Point)")
             with st.container(border=True, width=400):
                 st.markdown("""
                 - **데이터**: 분류별 시설 위치
@@ -290,7 +293,7 @@ def main():
                 
         with col2:
             # 탭 2에 대한 설명
-            st.markdown("##### 🟩 인구/건물 격자 분석 (Grid)")
+            st.markdown("##### 인구/건물 격자 분석 (Grid)")
             with st.container(border=True, width=400):
                 st.markdown("""
                 - **데이터**: 생활인구 밀집도, 토지이용 압축도
@@ -312,7 +315,7 @@ def main():
 
     st.write("")
     
-    tab1, tab2 = st.tabs(["📍 시설물 지점 분석", "🟩 인구/건물 격자 분석"])
+    tab1, tab2 = st.tabs(["시설물 지점 분석", "인구/건물 격자 분석"])
     with tab1:
         render_facility_tab()
     with tab2: 
