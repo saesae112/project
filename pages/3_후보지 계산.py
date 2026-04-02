@@ -2,13 +2,15 @@ import streamlit as st
 import pandas as pd
 import folium
 import os
+import base64
 from get.get import *
 from calculate.calculate import *
 from visualize.visualize import *
 from db.db import upload_result, delete_result
+from utils import set_common_banner
 
 st.set_page_config(layout="wide")
-
+set_common_banner()
 
 
 
@@ -47,11 +49,7 @@ ICON_MAP = {
     "water":             folium.Icon(color="lightblue", icon="tint",             prefix="fa"),
     "frequency":         folium.Icon(color="darkred",   icon="signal",           prefix="fa"),
 }
-with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
-    st.progress(75)
-    st.info("🚀 **3단계: 후보지 계산**\n\n알고리즘이 최적의 배치 지점을 산출하고 있습니다.")
-    st.divider()
+
 
 def main():
         # Get data building data
@@ -166,8 +164,8 @@ def main():
     results = st.session_state['calc_results']
     df_rank = results['df_rank']
 
-    st.title("후보지 계산 결과")
-    st.write("")
+    st.subheader("후보지 계산 결과")
+    st.divider()
 
     with st.expander(" **이 페이지에서는 무엇을 하나요?**", expanded=False):
         st.write("이 페이지는 **2단계에서 설정한 조건에 따라 최적의 후보지를 자동으로 계산**하고 결과를 시각화합니다.")

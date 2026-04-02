@@ -1,10 +1,15 @@
 import streamlit as st
 import pandas as pd
 import pymysql
+from utils import show_signup_form
+from utils import set_common_banner
+
 
 # DESIGN implement changes to the standard streamlit UI/UX
 st.set_page_config(page_title="D-DAS", page_icon="images/technology.png", layout="wide", initial_sidebar_state="collapsed")
-    
+set_common_banner()
+
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -20,10 +25,14 @@ def get_connection():
         charset="utf8mb4"
     )
 
+@st.dialog("계정 생성")
+def signup_dialog():
+    show_signup_form() # 분리해둔 함수 호출
+
 with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
+    st.write("**전체 분석 진행률**")
     st.progress(10)
-    st.info("🔎 **0단계: 로그인 및 가이드**\n\n가이드를 확인하고 로그인하세요.")
+    st.info("**0단계: 로그인 및 가이드**\n\n가이드를 확인하고 로그인하세요.")
     st.divider()
 
 # 회원가입 스타일
@@ -47,25 +56,17 @@ st.markdown("""
 with st.container():
     col1, col2= st.columns([3.73, 1])
     with col1:
-        st.title("대드론 방어체계")
-        st.write( '(D-DAS : Drone Defense Allocation Service)')
-        st.write("")
-        st.write("💡 **안내**")
-        st.caption("본 서비스는 국내 도심 환경을 고려한 대드론 방어체계(C-UAS) 최적 입지 분석을 제공합니다.")
-    with col2:
-        st.write("")
-        st.write("")
-        st.image('images/technology.png', width=200)
-
+        st.subheader("대드론 방어체계 최적 입지 선정 서비스 (DDAS) ")
+        st.caption( 'DDAS : Drone Defense Allocation Service')
+        st.divider()
+        st.write("본 서비스는 국내 도심 환경을 고려한 대드론 방어체계(C-UAS) 최적 입지 분석을 제공합니다.")
 st.divider()
 
 chan1, id_log=st.columns([5,2])
 
 with chan1:
-    st.subheader("🚀 이용 가이드")
-    st.write("처음 방문하셨나요? 아래 순서대로 분석을 진행해 보세요.")
+    st.subheader("이용 가이드")
 
-    st.divider() 
     st.write("") 
     
 
@@ -74,32 +75,31 @@ with chan1:
 
     with col1:
         with st.container(border=True):
-            st.markdown("### 1️⃣")
-            st.markdown("### **데이터 탐색**")
+            st.markdown("##### 1. **데이터 탐색**")
             st.write('')
-            st.caption("사이드바: 데이터 탐색")
-            st.write("서울시 전역의 **Raw Data를 지도에서 확인**하고, 데이터 분포 현황을 파악합니다.")
+            st.caption("사이드바: 1번 페이지")
+            st.write("서울시 전역의 **데이터를 지도에서 확인**하고, 데이터 분포 현황을 파악합니다.")
 
     with col2:
         with st.container(border=True):
-            st.markdown("### 2️⃣")
-            st.markdown("### **조건 설정**")
+            st.markdown("### 2.")
+            st.markdown("##### **후보지 조건 설정**")
             st.write('')
-            st.caption("사이드바: 후보지 조건 설정")
+            st.caption("사이드바: 2번 페이지")
             st.write("분석할 **격자 영역을 생성**하고, 방어무기 **사정거리** 및 시설별 **가중치**를 설정합니다.")
 
     with col3:
         with st.container(border=True):
-            st.markdown("### 3️⃣")
-            st.markdown("### **후보지 계산**")
+            st.markdown("### 3.")
+            st.markdown("##### **후보지 계산**")
             st.write('')
-            st.caption("사이드바: 후보지 계산")
+            st.caption("사이드바: 3번 페이지")
             st.write("설정된 시나리오를 바탕으로 **최적의 배치 지점**을 알고리즘이 자동 산출합니다.")
 
     with col4:
         with st.container(border=True):
-            st.markdown("### 4️⃣")
-            st.markdown("### **결과 활용**")
+            st.markdown("### 4.")
+            st.markdown("##### **결과 활용**")
             st.write('')
             st.caption("사이드바: 4~6번 페이지")
             st.write("도출된 후보지의 **상세 점수를 확인**하고 여러 시나리오를 상호 비교합니다.")
@@ -114,7 +114,7 @@ with id_log:
     # border=True를 유지하여 시각적 구분을 명확히 함
     with st.container(border=True, height=471):
         # 1. 상단 타이틀: 
-        st.subheader("🔐 시스템 로그인")
+        st.subheader("로그인")
         st.write('')
         st.caption("D-DAS 서비스 이용을 위해 로그인하세요.")
         st.write('')        
@@ -138,7 +138,8 @@ with id_log:
         with c1:
             st.caption("계정이 없으신가요?")
         with c2:
-            st.page_link("pages/회원가입.py", label="회원가입")
+            if st.button("회원가입"):
+                signup_dialog()
         
 
 

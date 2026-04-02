@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 import folium
 import plotly.graph_objects as go
+import base64
 from calculate.calculate import building_cover
 from db.db import *
+from utils import set_common_banner
 
 st.set_page_config(layout="wide")
+set_common_banner()
 
 # if "logged_in" not in st.session_state or not st.session_state.logged_in:
 #     st.error("로그인이 필요합니다.")
@@ -29,17 +32,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
     
-with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
-    st.progress(100)
-    st.success("✅ **최종: 결과 활용**\n\n분석이 완료되었습니다. 리포트를 확인해보세요.")
-    st.divider()
+
 
 if st.session_state.get('calc_results') ==None:
     st.error('⚠️ 사용자 입력 페이지에서 조건을 먼저 입력해주세요.')
     st.page_link("pages/2_후보지 조건 설정.py", label="조건 설정 페이지로 이동")
     st.stop()  # 여기서 실행 중단
 
+st.subheader("결과 요약")
+st.divider()
 
 results    = st.session_state.get('calc_results')
 

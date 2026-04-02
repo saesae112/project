@@ -3,21 +3,20 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import BallTree
 import plotly.graph_objects as go
+import base64
+from utils import set_common_banner
 
 st.set_page_config(layout="wide")
+set_common_banner()
 
 
 # if "logged_in" not in st.session_state or not st.session_state.logged_in:
 #     st.error("로그인이 필요합니다.")
 #     st.stop()  # 이 아래 코드는 실행되지 않음
     
-with st.sidebar:
-    st.write("📊 **전체 분석 진행률**")
-    st.progress(100)
-    st.success("✅ **최종: 결과 활용**\n\n'후보지 계산' 페이지에서 복수의 시나리오를 저장하고 서로 비교해보세요.")
-    st.divider()
 
-st.title("시나리오 비교")
+st.subheader("시나리오 비교")
+st.divider()
 
 
 def building_cover(coords_grid, coords_building, RANGE_KM):
