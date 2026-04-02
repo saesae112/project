@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import streamlit as st
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from glob import glob
 import json
 import geopandas as gpd
@@ -12,8 +12,21 @@ from shapely import wkt
 # DB 초기화 (삭제 후 재생성)
 # ────────────────────────────────────────────────────────────────────────────────
 
-def reset_and_create_db():
-    """데이터베이스를 완전히 삭제하고 새로 생성합니다."""
+def reset_db():
+    """
+    데이터베이스를 완전히 삭제하고 설정된 기본 인코딩으로 새로 생성한다.
+
+    st.secrets에 정의된 MySQL 정보를 바탕으로 서버에 접속하며,
+    기존 DB가 존재할 경우 삭제 후 다시 생성하여 초기 상태로 만든다.
+
+    Parameters
+    ----------------------
+    None
+
+    Returns
+    ----------------------
+    None
+    """
     db = st.secrets["mysql"]
 
     # 특정 DB를 지정하지 않고 서버 자체에 연결 (관리자 권한)
@@ -33,7 +46,7 @@ def reset_and_create_db():
             conn.execute(text(f"CREATE DATABASE {db['database']} CHARACTER SET {db['charset']}"))
 
     except Exception as e:
-        print(f"❌ 데이터베이스 초기화 실패: {e}")
+        print(f"데이터베이스 초기화 실패: {e}")
     finally:
         temp_engine.dispose()  # 임시 엔진 연결 해제
 
@@ -45,8 +58,18 @@ def reset_and_create_db():
 # ────────────────────────────────────────────────────────────────────────────────
 def get_engine(db_name=None):
     """
-    SQLAlchemy 엔진을 생성하여 반환합니다.
-    db_name을 지정하면 해당 DB로 연결, 없으면 secrets의 기본 DB 사용
+    SQLAlchemy 엔진을 생성하여 반환한다.
+
+    Parameters
+    ----------------------
+    db_name : str, optional
+        연결할 데이터베이스의 이름. 지정하지 않으면 st.secrets의 
+        기본 database 설정을 사용한다.
+
+    Returns
+    ----------------------
+    sqlalchemy.engine.base.Engine
+        생성된 SQLAlchemy 데이터베이스 엔진 객체.
     """
     db = st.secrets["mysql"]
     database = db_name if db_name else db['database']
@@ -64,47 +87,100 @@ def get_engine(db_name=None):
 # DB 연결 상태 확인
 # ────────────────────────────────────────────────────────────────────────────────
 def test_connection(engine):
-    """SELECT 1 쿼리로 DB 연결 상태를 확인합니다. 성공 시 1 반환"""
+    """
+    단순 쿼리(SELECT 1)를 실행하여 DB 연결 상태를 확인한다.
+
+    Parameters
+    ----------------------
+    engine : sqlalchemy.engine.base.Engine
+        상태를 확인할 데이터베이스 엔진.
+
+    Returns
+    ----------------------
+    int
+        연결 성공 시 1을 반환한다.
+    """
     with engine.connect() as conn:
         result = conn.execute(text("SELECT 1"))
         return result.scalar()
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 로컬 데이터 파일 → DB 적재
+# 데이터 세팅
 # ────────────────────────────────────────────────────────────────────────────────
-def import_data(engine):
+def set_data():
     """
-    final_data/ 폴더의 CSV 및 GeoJSON 파일을 DB에 적재합니다.
-    - CSV  : df_ 접두어 제거 후 테이블명으로 사용 (예: df_grid.csv → grid)
-    - GeoJSON : 파일명의 마지막 단어를 테이블명으로 사용 (예: grid5_polygon.geojson → polygon)
-    """
+    로컬의 CSV 및 GeoJSON 파일을 읽어 DB 테이블로 적재한다.
 
-    # ── CSV 파일 적재 ─────────────────────────────────────────────
+    final_data 폴더 내의 파일들을 검색하여, DB에 존재하지 않는 
+    테이블일 경우에만 새로 생성하고 데이터를 임포트한다.
+
+    Parameters
+    ----------------------
+    None
+
+    Returns
+    ----------------------
+    None
+    """
+    # DATABASE 세팅
+    db = st.secrets["mysql"]
+    base_url = f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/"
+    base_engine = create_engine(base_url)
+
+    with base_engine.connect() as conn:
+        result = conn.execute(text("SHOW DATABASES"))
+        existing_dbs = [row[0] for row in result]
+        if db['database'] not in existing_dbs:
+            conn.execute(text(f'CREATE SCHEMA {db['database']} CHARACTER SET {db['charset']}'))
+        else:
+            print(f"'{db['database']}' 데이터베이스가 이미 존재한다.")
+    disconnect_db(base_engine)
+
+    # IMPORT data
+    engine = get_engine(db['database'])
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+
+    # 2. CSV 파일 처리
+    print("--- CSV 데이터 확인 및 적재 시작 ---")
     file_list = glob('final_data/*.csv')
+
     for file in file_list:
-        df = pd.read_csv(file)
+        file_basename = os.path.basename(file)
+        raw_name = os.path.splitext(file_basename)[0]
+        
+        table_name = raw_name[3:] if raw_name.startswith('df_') else raw_name
+        
+        # 기존 DB에 테이블이 없는 경우에만 적재 진행
+        if table_name not in existing_tables:
+            print(f"'{table_name}' 테이블 생성 및 데이터 임포트 중...")
+            df = pd.read_csv(file)
+            df.to_sql(name=table_name, con=engine, if_exists='fail', index=False)
+        else:
+            print(f"'{table_name}' 테이블은 이미 존재하여 건너뜀.")
 
-        # 확장자 제거 후 df_ 접두어 제거
-        raw_name  = os.path.splitext(os.path.basename(file))[0]
-        file_name = raw_name[3:] if raw_name.startswith('df_') else raw_name
-
-        df.to_sql(name=file_name, con=engine, if_exists='replace', index=False)
-
-    # ── GeoJSON 파일 적재 ─────────────────────────────────────────
+    # 3. GeoJSON 파일 처리
+    print("\n--- GeoJSON 데이터 확인 및 적재 시작 ---")
     json_list = glob('final_data/*.geojson')
-    for json_file in json_list:
-        gdf = gpd.read_file(json_file)
 
-        # 파일명의 마지막 단어를 테이블명으로 사용 (예: grid5_polygon → polygon)
-        raw_name  = os.path.splitext(os.path.basename(json_file))[0]
+    for json_file in json_list:
+        raw_name = os.path.splitext(os.path.basename(json_file))[0]
         json_name = raw_name.split('_')[-1]
 
-        # geometry 컬럼을 문자열(WKT)로 변환 후 저장
-        if 'geometry' in gdf.columns:
+        # 기존 DB에 테이블이 없는 경우에만 적재 진행
+        if json_name not in existing_tables:
+            print(f"'{json_name}' 테이블 생성 및 데이터 임포트 중...")
+            gdf = gpd.read_file(json_file)
+            
+            # geometry 컬럼 문자열 변환
             gdf['geometry'] = gdf['geometry'].apply(lambda x: str(x))
+            gdf.to_sql(name=json_name, con=engine, if_exists='fail', index=False)
+        else:
+            print(f"'{json_name}' 테이블은 이미 존재하여 건너뜀.")
+            
+    disconnect_db(engine)
 
-        gdf.to_sql(name=json_name, con=engine, if_exists='replace', index=False)
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -112,8 +188,19 @@ def import_data(engine):
 # ────────────────────────────────────────────────────────────────────────────────
 def get_all_data(engine, data_list):
     """
-    지정된 테이블 목록을 SELECT하여 딕셔너리로 반환합니다.
-    Returns: {테이블명: DataFrame}
+    지정된 테이블 목록의 모든 데이터를 조회하여 딕셔너리로 반환한다.
+
+    Parameters
+    ----------------------
+    engine : sqlalchemy.engine.base.Engine
+        조회할 데이터베이스 엔진.
+    data_list : list of str
+        데이터를 가져올 테이블 이름들의 리스트.
+
+    Returns
+    ----------------------
+    dict
+        {테이블명: pandas.DataFrame} 형태의 딕셔너리.
     """
     dfs = {}
     for data in data_list:
@@ -125,25 +212,34 @@ def get_all_data(engine, data_list):
 # DB 연결 해제
 # ────────────────────────────────────────────────────────────────────────────────
 def disconnect_db(engine):
-    """엔진 연결 풀을 해제합니다."""
+    """
+    데이터베이스 엔진 연결 풀을 해제하고 리소스를 정리한다.
+
+    Parameters
+    ----------------------
+    engine : sqlalchemy.engine.base.Engine
+        해제할 데이터베이스 엔진.
+
+    Returns
+    ----------------------
+    None
+    """
     engine.dispose()
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 메인 데이터 로드 파이프라인 (1단계: 건물/격자 데이터)
+# dfs1 데이터 로드 파이프라인
 # ────────────────────────────────────────────────────────────────────────────────
 @st.cache_data
 def get_dfs1():
-    """
-    DB 초기화 → 연결 → 데이터 적재 → 조회 → 연결 해제 순서로 실행합니다.
-    population_raw, density 등 중간 처리용 테이블은 제외하고 반환합니다.
-    """
-    reset_and_create_db()
-
-    # 1단계: DB 연결
+    
+    # Set data
+    set_data()
+    
+    # Connect
     engine = get_engine()
 
-    # 2단계: 연결 상태 확인
+    # Check Connection
     try:
         if test_connection(engine) == 1:
             print("1/2단계: DB 연결 및 체크 성공")
@@ -151,33 +247,25 @@ def get_dfs1():
         print(f"DB 연결 실패: {e}")
         return None
 
-    # 3단계: CSV / GeoJSON 파일 DB 적재
-    import_data(engine)
+    # dfs1 알고리즘 계산에 들어갈 테이블만 필터링
+    inspector = inspect(engine)
+    all_tables = inspector.get_table_names()
+    
+    exclude_keywords = ['population_raw', 'density']
+    table_names = []
 
-    # 4단계: 제외 키워드 필터링 후 테이블 목록 구성
-    file_list        = glob('final_data/*.csv')
-    exclude_keywords = ['population_raw', 'density']  # 중간 처리용 테이블 제외
-    table_names      = []
-
-    for file in file_list:
-        file_basename = os.path.basename(file)
-
-        # 제외 키워드가 파일명에 포함되면 스킵
-        if any(keyword in file_basename for keyword in exclude_keywords):
+    for table in all_tables:
+        if any(keyword in table for keyword in exclude_keywords):
             continue
+        table_names.append(table)
 
-        raw_name   = os.path.splitext(file_basename)[0]
-        table_name = raw_name[3:] if raw_name.startswith('df_') else raw_name
-        table_names.append(table_name)
-
-    # 5단계: 필터링된 테이블만 SELECT
+    # 필터링된 테이블만 GET
     dfs = get_all_data(engine, table_names)
 
-    # 6단계: 연결 해제
+    # 연결 해제
     disconnect_db(engine)
 
     return dfs
-
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -185,14 +273,14 @@ def get_dfs1():
 # ────────────────────────────────────────────────────────────────────────────────
 def get_latest_grid_data():
     """
-    다운로드 폴더에서 가장 최근에 생성된 격자 CSV와
-    대응하는 polygon JSON 파일을 함께 읽어옵니다.
-    (예: grid5.csv ↔ grid5_polygon.json)
+    다운로드 폴더에서 가장 최근에 생성된 격자 CSV와 polygon JSON 파일을 로드한다.
 
     Returns
-    -------
-    df_grid        : 격자 DataFrame
-    polygon_coords : 다각형 꼭짓점 좌표 리스트 (JSON 없으면 None)
+    ----------------------
+    df_grid : pandas.DataFrame or None
+        격자 데이터프레임. 파일이 없으면 None.
+    polygon_coords : list or None
+        다각형 꼭짓점 좌표 리스트. JSON 파일이 없으면 None.
     """
     download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
 
@@ -217,7 +305,7 @@ def get_latest_grid_data():
             with open(latest_json, 'r', encoding='utf-8') as f:
                 polygon_info = json.load(f)
         else:
-            print(f"⚠️ 경고: 짝이 되는 JSON({os.path.basename(latest_json)})이 없다.")
+            print(f"경고: 짝이 되는 JSON({os.path.basename(latest_json)})이 없다.")
 
         return df_grid, polygon_info['polygon_coords']
 
@@ -231,8 +319,19 @@ def get_latest_grid_data():
 # ────────────────────────────────────────────────────────────────────────────────
 def get_df_population(df_pop_raw, df_grid):
     """
-    인구 원시 데이터를 격자 중심 좌표에 최근접 조인하여
-    격자별 인구밀집도 DataFrame을 반환합니다.
+    인구 원시 데이터를 격자 좌표에 조인하여 매핑한다.
+
+    Parameters
+    ----------------------
+    df_pop_raw : pandas.DataFrame
+        'center_lng', 'center_lat', '밀집도' 컬럼을 포함한 원시 데이터.
+    df_grid : pandas.DataFrame
+        기준이 되는 격자 데이터.
+
+    Returns
+    ----------------------
+    pandas.DataFrame
+        grid_id별 인구밀집도(population_density)가 매핑된 데이터프레임.
     """
     # 격자 / 인구 데이터를 GeoDataFrame으로 변환 (EPSG:4326)
     gdf_grid = gpd.GeoDataFrame(
@@ -272,8 +371,22 @@ def get_df_population(df_pop_raw, df_grid):
 # ────────────────────────────────────────────────────────────────────────────────
 def get_df_area_density(df_den_raw, df_grid):
     """
-    면적밀집도 폴리곤 데이터를 격자 중심 좌표에 공간 조인하여
-    격자별 면적밀집도 DataFrame을 반환합니다.
+    면적밀집도 폴리곤 데이터를 격자 중심 좌표에 공간 조인하여 매핑한다.
+
+    격자 중심점(Point)이 면적 폴리곤(Polygon) 내부에 포함되는지(within)를
+    기준으로 공간 조인을 수행한다.
+
+    Parameters
+    ----------------------
+    df_den_raw : pandas.DataFrame
+        'geometry'(WKT 형식), 'value' 컬럼을 포함한 원시 데이터.
+    df_grid : pandas.DataFrame
+        기준이 되는 격자 데이터.
+
+    Returns
+    ----------------------
+    pandas.DataFrame
+        grid_id별 면적밀집도(area_density)가 매핑된 데이터프레임.
     """
     # WKT 문자열 → shapely geometry 객체 변환
     df_den_raw['geometry'] = df_den_raw['geometry'].apply(wkt.loads)
@@ -311,12 +424,17 @@ def get_df_area_density(df_den_raw, df_grid):
 # ────────────────────────────────────────────────────────────────────────────────
 def get_dfs2(df_grid):
     """
-    DB에서 population_raw, density 테이블을 불러와
-    격자 기준으로 인구밀집도·면적밀집도를 계산하여 반환합니다.
+    DB에서 원시 데이터를 호출하여 격자 기준의 인구/면적밀집도 데이터프레임을 생성한다.
+
+    Parameters
+    ----------------------
+    df_grid : pandas.DataFrame
+        공간 조인의 기준이 되는 격자 데이터프레임.
 
     Returns
-    -------
-    dfs2 : {'population': df_population, 'area_density': df_area_density}
+    ----------------------
+    dict
+        {'population': df_population, 'area_density': df_area_density} 형태의 딕셔너리.
     """
     engine    = get_engine()
     data_list = ['population_raw', 'density']

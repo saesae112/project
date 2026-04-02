@@ -1,4 +1,4 @@
-from get_data.get import * 
+from get.get import * 
 import streamlit as st
 from sqlalchemy import create_engine, text
 from glob import glob
@@ -39,7 +39,7 @@ def reset_and_create_db_server():
             print(f"🆕 새 데이터베이스({db['database']}) 생성 중...")
             conn.execute(text(f"CREATE DATABASE [{db['database']}]"))
             
-            print(f"✅ '{db['database']}' 초기화 및 생성 완료!")
+            print(f"'{db['database']}' 초기화 및 생성 완료!")
 
     except Exception as e:
         print(f"데이터베이스 초기화 실패: {e}")
@@ -75,6 +75,38 @@ def get_all_data_server(engine, data_list):
         dfs[data] = pd.read_sql(query, engine)
     return dfs
 
+def import_data(engine):
+    """
+    final_data/ 폴더의 CSV 및 GeoJSON 파일을 DB에 적재합니다.
+    - CSV  : df_ 접두어 제거 후 테이블명으로 사용 (예: df_grid.csv → grid)
+    - GeoJSON : 파일명의 마지막 단어를 테이블명으로 사용 (예: grid5_polygon.geojson → polygon)
+    """
+
+    # ── CSV 파일 적재 ─────────────────────────────────────────────
+    file_list = glob('final_data/*.csv')
+    for file in file_list:
+        df = pd.read_csv(file)
+
+        # 확장자 제거 후 df_ 접두어 제거
+        raw_name  = os.path.splitext(os.path.basename(file))[0]
+        file_name = raw_name[3:] if raw_name.startswith('df_') else raw_name
+
+        df.to_sql(name=file_name, con=engine, if_exists='replace', index=False)
+
+    # ── GeoJSON 파일 적재 ─────────────────────────────────────────
+    json_list = glob('final_data/*.geojson')
+    for json_file in json_list:
+        gdf = gpd.read_file(json_file)
+
+        # 파일명의 마지막 단어를 테이블명으로 사용 (예: grid5_polygon → polygon)
+        raw_name  = os.path.splitext(os.path.basename(json_file))[0]
+        json_name = raw_name.split('_')[-1]
+
+        # geometry 컬럼을 문자열(WKT)로 변환 후 저장
+        if 'geometry' in gdf.columns:
+            gdf['geometry'] = gdf['geometry'].apply(lambda x: str(x))
+
+        gdf.to_sql(name=json_name, con=engine, if_exists='replace', index=False)
 
 def reset_server_data():
 

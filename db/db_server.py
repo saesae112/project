@@ -1,9 +1,29 @@
-from get_data.get import get_engine, disconnect_db
+from get.get import get_engine, disconnect_db
 from get_data.get_server import get_engine_server
 from sqlalchemy import text
 
 def upload_result_server(df):
-    # 1. DB 생성을 위해 'master'에 직접 연결 (캐시를 타지 않거나 명시적 인자 전달)
+    """
+    서버 DB 내 새로운 케이스 테이블로 DataFrame 데이터를 업로드한다.
+
+    'master' DB에 연결하여 'result' 데이터베이스 존재 여부를 확인 및 생성하고,
+    'result' DB 내 기존 'case' 테이블 번호를 추적하여 다음 순번으로 데이터를 저장한다.
+
+    Parameters
+    ----------------------
+    df : pandas.DataFrame
+        서버 데이터베이스에 저장하고자 하는 결과 데이터셋.
+
+    Returns
+    ----------------------
+    None
+        이 함수는 값을 반환하지 않으며, 작업 단계별 메시지를 출력한다.
+
+    Notes
+    ----------------------
+    - DB 생성 시 isolation_level="AUTOCOMMIT"을 설정하여 트랜잭션 외부에서 실행한다.
+    - 테이블명은 'case{n}' 형식으로 자동 지정되며, 중복 시 'replace' 방식으로 덮어쓴다.
+    """
 
     engine_master = get_engine_server(db_name='master')
     
@@ -20,8 +40,6 @@ def upload_result_server(df):
         else:
             print("'result' 데이터베이스가 이미 존재한다.")
             
-
-    # 2. 데이터 적재를 위해 'result' DB에 연결
     engine_result = get_engine_server(db_name='result')
     
     try:
@@ -34,7 +52,7 @@ def upload_result_server(df):
             next_index = max(indices) + 1 if indices else 1
             table_name = f"case{next_index}"
 
-            # 데이터 저장
+    
             df.to_sql(name=table_name, con=engine_result, if_exists='replace', index=False)
             conn.commit()
             print(f"[{table_name}] 테이블에 저장 성공!")
@@ -46,7 +64,23 @@ def upload_result_server(df):
 
 def delete_result_server(case_name):
     """
-    result 데이터베이스에서 특정 결과 테이블(caseN)을 삭제한다.
+    'result' 데이터베이스에서 특정 결과 테이블을 삭제한다.
+
+    Parameters
+    ----------------------
+    case_name : str
+        삭제하고자 하는 테이블의 이름 (예: 'case1').
+        SQL Injection 방지 및 특수문자 대응을 위해 대괄호([])로 감싸서 처리한다.
+
+    Returns
+    ----------------------
+    None
+        이 함수는 값을 반환하지 않는다.
+
+    Raises
+    ----------------------
+    Exception
+        DB 연결 실패 또는 DROP TABLE 쿼리 실행 중 오류 발생 시 예외를 출력한다.
     """
     # 1. result DB에 연결 (인자로 'result' 전달)
     engine = get_engine_server(db_name='result')

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 import os
-from get_data.get import *
+from get.get import *
 from calculate.calculate import *
 from visualize.visualize import *
 from db.db import upload_result, delete_result
